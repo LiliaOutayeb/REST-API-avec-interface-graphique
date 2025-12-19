@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Persons & Cities API Interface</title>
+    <style>
+      body {
+        font-family: Helvetica, sans-serif;
+        background: #bb8cb1ca;
+        margin: 0;
+        padding: 20px;
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .top-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      button {
+        padding: 10px 15px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        background: #404fb0;
+        color: white;
+      }
+
+      button:hover {
+        background: #393939;
+      }
+
+      .service {
+        max-width: 800px;
+        margin: auto;
+        background: rgb(255, 255, 255);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      select,
+      input {
+        width: 100%;
+        padding: 8px;
+        margin: 10px 0;
+      }
+
+      .actions {
+        margin-top: 15px;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .popup {
+        position: fixed;
+        inset: 0;
+        background: rgba(45, 45, 45, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .popup-content {
+        background: white;
+        width: 70%;
+        max-height: 80%;
+        overflow: auto;
+        padding: 20px;
+        border-radius: 10px;
+        position: relative;
+      }
+
+      .close {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 20px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+
+      pre {
+        background: #111827;
+        color: #e5e7eb;
+        padding: 15px;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Welcome to my REST API :)</h1>
+
+    <div class="top-buttons">
+      <button onclick="getAllPersons()">Show all persons</button>
+      <button onclick="getAllCities()">Show all cities</button>
+    </div>
+
+    <div class="service">
+      <label><strong>Select the service you want !</strong></label>
+      <select id="serviceType" onchange="updateServiceUI()">
+        <option value="">Click here</option>
+        <option value="GET">GET (Show data)</option>
+        <option value="POST">POST (Add data)</option>
+        <option value="PATCH">PATCH (Make a change)</option>
+        <option value="DELETE">DELETE (Remove)</option>
+      </select>
+
+      <div id="getUI" class="actions hidden">
+        <select id="getAction">
+          <option value="persons">All persons</option>
+          <option value="personsFields">Persons with selected fields</option>
+          <option value="personsSorted">Persons but sorted</option>
+          <option value="personById">Person by id</option>
+          <option value="personByName">Persons by name</option>
+          <option value="cities">All cities</option>
+          <option value="cityById">Cities by id</option>
+        </select>
+        <input id="getParam1" placeholder="id or name or fields/sort" />
+        <button onclick="executeGet()">Click to execute GET</button>
+      </div>
+
+      <div id="postUI" class="actions hidden">
+        <input id="postId" placeholder="id" />
+        <input id="postName" placeholder="Name" />
+        <input id="postArea" placeholder="Area (for a city only)" />
+        <input
+          id="postPopulation"
+          placeholder="Population ( for a city only)"
+        />
+        <select id="postType">
+          <option value="person">Add a person</option>
+          <option value="city">Add a city</option>
+        </select>
+        <button onclick="executePost()">Click to execute POST</button>
+      </div>
+
+      <div id="patchUI" class="actions hidden">
+        <input id="patchPersonId" placeholder="Person's id" />
+        <input id="patchValue" placeholder="Name or city id" />
+        <select id="patchAction">
+          <option value="name">Change person name</option>
+          <option value="addCity">Add a city to person</option>
+          <option value="removeCity">Remove a city from a person</option>
+        </select>
+        <button onclick="executePatch()">Click to execute PATCH</button>
+      </div>
+
+      <div id="deleteUI" class="actions hidden">
+        <input id="deleteId" placeholder="id" />
+        <select id="deleteType">
+          <option value="person">Delete a person</option>
+          <option value="city">Delete a city</option>
+        </select>
+        <button onclick="executeDelete()">Click to execute DELETE</button>
+      </div>
+    </div>
+
+    <div class="popup" id="popup">
+      <div class="popup-content">
+        <span class="close" onclick="closePopup()">CLOSE</span>
+        <pre id="popupResult"></pre>
+      </div>
+    </div>
+
+    <script>
+      const API = "http://localhost:5001";
+
+      function showPopup(data) {
+        document.getElementById("popupResult").textContent = JSON.stringify(
+          data,
+          null,
+          2
+        );
+        document.getElementById("popup").style.display = "flex";
+      }
+      function closePopup() {
+        document.getElementById("popup").style.display = "none";
+      }
+
+      function updateServiceUI() {
+        ["getUI", "postUI", "patchUI", "deleteUI"].forEach((id) =>
+          document.getElementById(id).classList.add("hidden")
+        );
+        const val = document.getElementById("serviceType").value;
+        if (val)
+          document
+            .getElementById(val.toLowerCase() + "UI")
+            .classList.remove("hidden");
+      }
+
+      async function getAllPersons() {
+        const res = await fetch(`${API}/persons`);
+        showPopup(await res.json());
+      }
+      async function getAllCities() {
+        const res = await fetch(`${API}/cities`);
+        showPopup(await res.json());
+      }
+
+      async function executeGet() {
+        const action = document.getElementById("getAction").value;
+        const p = document.getElementById("getParam1").value;
+        let url = "";
+
+        if (action === "persons") url = "/persons";
+        if (action === "personsFields") url = `/persons?fields=${p}`;
+        if (action === "personsSorted") url = `/persons?sort=${p}`;
+        if (action === "personById") url = `/persons/${p}`;
+        if (action === "personByName") url = `/persons?name=${p}`;
+        if (action === "cities") url = "/cities";
+        if (action === "cityById") url = `/cities/${p}`;
+
+        const res = await fetch(API + url);
+        showPopup(await res.json());
+      }
+
+      async function executePost() {
+        const type = document.getElementById("postType").value;
+        let body = { id: postId.value, name: postName.value };
+        let url = "/persons";
+
+        if (type === "city") {
+          url = "/cities";
+          body.area = postArea.value;
+          body.population = postPopulation.value;
+        }
+
+        const res = await fetch(API + url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        showPopup(await res.json());
+      }
+
+      async function executePatch() {
+        const id = patchPersonId.value;
+        const value = patchValue.value;
+        const action = patchAction.value;
+        let body = {};
+
+        if (action === "name") body.name = value;
+        if (action === "addCity") body.addCityId = value;
+        if (action === "removeCity") body.removeCityId = value;
+
+        const res = await fetch(`${API}/persons/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        showPopup(await res.json());
+      }
+
+      async function executeDelete() {
+        const id = deleteId.value;
+        const type = deleteType.value;
+        const url = type === "person" ? `/persons/${id}` : `/cities/${id}`;
+
+        const res = await fetch(API + url, { method: "DELETE" });
+        showPopup(await res.json());
+      }
+    </script>
+  </body>
+</html>
